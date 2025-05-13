@@ -23,6 +23,17 @@
         </form>
 
         <div class="password-display" id="passwordDisplay"></div>
+        
+        <!-- 密码强度指示器 -->
+        <div class="strength-meter" id="strengthMeter">
+            <div class="strength-bar">
+                <div class="strength-fill"></div>
+            </div>
+            <div class="strength-label">
+                密码强度: <span>无</span>
+            </div>
+        </div>
+        
         <button type="button" id="copyButton">复制密码</button>
         
         <!-- 密码历史记录 -->
@@ -32,6 +43,9 @@
         </div>
     </div>
 
-    <script src="js/script.js"></script>
+    <script src="js/utils/password.js"></script>
+    <script src="js/utils/password-manager.js"></script>
+    <script src="js/utils/history.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>
