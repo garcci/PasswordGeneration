@@ -90,36 +90,78 @@ input[type="number"]:focus {
     background-color: #d6d8db;
 }
 
+/* 按钮通用样式 */
 button {
+    padding: 12px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    align-self: flex-start;
+    margin-top: 10px;
     background-color: #007BFF;
     color: white;
-    border: none;
-    padding: 12px;
-    font-size: 16px;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.2s ease;
 }
 
-button:hover {
-    background-color: #0056b3;
+/* 暗色模式按钮样式 */
+.dark-mode button {
+    background-color: #007BFF;
+    color: white;
+}
+
+/* 复制按钮悬停效果 */
+#copyButton:hover {
     transform: scale(1.05);
 }
 
+/* 按钮按下效果 */
+button:active {
+    transform: scale(0.98);
+}
+
+/* 查看按钮样式 */
+#viewButton {
+    background-color: transparent;
+    color: #007BFF;
+    border: 1px solid #007BFF;
+    margin-left: 10px;
+    padding: 8px 12px;
+    font-size: 14px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.dark-mode #viewButton {
+    border-color: #ffffff;
+    color: #ffffff;
+}
+
+/* 密码容器 */
+.password-container {
+    width: 100%;
+    overflow-x: auto; /* 允许水平滚动 */
+    padding: 8px;
+    box-sizing: border-box;
+}
+
+/* 密码显示区域 */
 .password-display {
-    min-height: 50px;
-    font-size: 26px;
-    font-weight: bold;
-    letter-spacing: 1.2px;
-    margin-bottom: 20px;
-    word-wrap: break-word;
+    font-family: monospace;
+    font-size: 20px;
+    text-align: center;
+    margin: 20px 0;
+    padding: 15px;
+    border-radius: 8px;
+    min-height: 32px;
+    transition: all 0.3s ease;
     word-break: break-all;
     white-space: pre-wrap;
-    padding: 10px;
-    background-color: #f8f9fa;
-    border-radius: 8px;
-    max-width: 100%;
     overflow-wrap: break-word;
+    hyphens: auto;
+    max-width: 100%;
+    display: inline-block; /* 改为inline-block以适应容器 */
+    min-width: 100%; /* 确保在容器内正确显示 */
 }
 
 @media (min-width: 769px) {
@@ -137,34 +179,87 @@ button:hover {
     text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
 }
 
-.strength-meter {
-    margin-top: 25px;
+.strength-meter-container {
     width: 100%;
-}
-
-.strength-bar {
-    height: 10px;
-    background-color: #e9ecef;
-    border-radius: 5px;
-    overflow: hidden;
-    margin-bottom: 10px;
+    max-width: 400px;
+    margin: 20px auto;
     position: relative;
 }
 
+/* 密码强度条 */
+.strength-meter {
+    width: 100%;
+    height: 24px;
+    background-color: #e9ecef;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+}
+
+/* 密码强度填充条 */
 .strength-fill {
     height: 100%;
     width: 0%;
-    background: linear-gradient(90deg, #ff4b4b, #ffa500, #ffff00, #b2fab4, #3cd63c);
-    transition: all 0.3s ease;
-    position: absolute;
-    top: 0;
-    left: 0;
+    transition: width 0.3s ease, background-color 0.3s ease;
+    position: relative;
+    z-index: 1;
 }
 
+/* 密码强度标签 */
 .strength-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    color: white;
     font-size: 14px;
-    color: #666;
-    text-align: left;
+    font-weight: bold;
+    pointer-events: none;
+}
+
+/* 强度颜色 */
+.strength-weak {
+    background-color: #ff4d4d;
+}
+
+.strength-medium {
+    background-color: #ffa500;
+}
+
+.strength-strong {
+    background-color: #00c853;
+}
+
+.strength-very-strong {
+    background-color: #007BFF;
+}
+
+/* 暗色模式下的密码强度指示器 */
+.dark-mode .strength-meter {
+    background-color: #3a3a3a;
+}
+
+.dark-mode .strength-label {
+    color: #ffffff;
+}
+
+/* 密码显示区域 */
+.password-display {
+    font-family: monospace;
+    font-size: 20px;
+    text-align: center;
+    margin: 20px 0;
+    padding: 15px;
+    border-radius: 8px;
+    min-height: 32px;
+    transition: all 0.3s ease;
+    word-break: break-all; /* 允许在任意字符间断行 */
+    white-space: pre-wrap; /* 保持空格同时允许自动换行 */
+    overflow-wrap: break-word; /* 确保长单词换行 */
+    hyphens: auto; /* 添加连字符支持 */
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 #copyButton {

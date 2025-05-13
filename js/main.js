@@ -165,10 +165,15 @@ document.addEventListener('DOMContentLoaded', function() {
         initPasswordSlider();
         
         // 初始化开关样式
-        document.querySelectorAll('.ios-switch').forEach(switchElement => {
+        document.querySelectorAll('.border-toggle').forEach(switchElement => {
             switchElement.style.setProperty('--track-color', '#007BFF');
             switchElement.style.setProperty('--thumb-color', 'white');
         });
+        
+        // 确保初始化复制按钮
+        initCopyButton();
+        
+        // 移除了查看按钮的初始化
     } else {
         console.error('缺少必要DOM元素:', missingElements);
         // 设置一个观察器，在元素准备好后初始化
@@ -180,66 +185,55 @@ document.addEventListener('DOMContentLoaded', function() {
                 initPasswordSlider();
                 
                 // 初始化开关样式
-                document.querySelectorAll('.ios-switch').forEach(switchElement => {
+                document.querySelectorAll('.border-toggle').forEach(switchElement => {
                     switchElement.style.setProperty('--track-color', '#007BFF');
                     switchElement.style.setProperty('--thumb-color', 'white');
                 });
+                
+                // 确保初始化复制按钮
+                initCopyButton();
+                
+                // 移除了查看按钮的初始化
             }
         });
         
         observer.observe(document.body, { childList: true, subtree: true });
     }
-    
-    // 初始化边框切换控件
-    document.querySelectorAll('.border-toggle').forEach(toggle => {
-        // 从localStorage获取初始状态
-        const inputId = toggle.getAttribute('for');
-        const savedConfig = localStorage.getItem('passwordConfig');
-        let initialState = true;
-        
-        if (savedConfig) {
-            try {
-                const config = JSON.parse(savedConfig);
-                initialState = config[inputId] !== undefined ? config[inputId] : true;
-            } catch (error) {
-                console.error('配置解析失败:', error);
-            }
-        }
-        
-        // 设置初始状态
-        if (initialState) {
-            toggle.classList.add('active');
-        }
-        
-        // 添加点击事件监听器
-        toggle.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // 切换active类
-            toggle.classList.toggle('active');
-            
-            // 更新隐藏的复选框状态（如果存在）
-            const checkbox = document.getElementById(inputId);
-            if (checkbox) {
-                checkbox.checked = toggle.classList.contains('active');
-                
-                // 触发表单提交以生成新密码
-                const form = document.getElementById('passwordForm');
-                if (form && form.onsubmit) {
-                    form.onsubmit();
-                } else {
-                    // 如果没有表单提交处理程序，直接生成密码
-                    const event = new Event('submit', { bubbles: true, cancelable: true });
-                    if (form) {
-                        form.dispatchEvent(event);
-                    }
-                }
-            }
-        });
-    });
 });
 
+// 初始化复制按钮
+function initCopyButton() {
+    const copyButton = document.getElementById('copyButton');
+    if (copyButton && !copyButton.getAttribute('data-listener-added')) {
+        copyButton.addEventListener('click', () => {
+            const password = document.getElementById('passwordDisplay').textContent;
+            navigator.clipboard.writeText(password).then(() => {
+                // 添加复制成功动画
+                copyButton.textContent = '已复制!';
+                copyButton.style.backgroundColor = '#28a745';
+                
+                // 添加到密码历史记录（作为备份）
+                addPasswordToHistory(password);
+                
+                setTimeout(() => {
+                    copyButton.textContent = '复制密码';
+                    copyButton.style.backgroundColor = '#007BFF';
+                }, 2000);
+            }).catch(err => {
+                console.error('复制到剪贴板失败: ', err);
+                alert('复制到剪贴板失败，请手动复制');
+                
+                // 如果复制失败，也尝试添加到历史记录（作为备份）
+                const password = document.getElementById('passwordDisplay').textContent;
+                addPasswordToHistory(password);
+            });
+            
+            copyButton.setAttribute('data-listener-added', 'true');
+        });
+    }
+}
+
+// 移除了initViewButton函数
 // 初始化函数
 function init() {
     // 初始化密码管理器
@@ -618,3 +612,125 @@ function init() {
         }
     });
 }
+
+// 更新密码显示
+function updatePasswordDisplay(password) {
+    const displayContainer = document.querySelector('.password-container');
+    const display = document.getElementById('passwordDisplay');
+    
+    if (display) {
+        display.textContent = password;
+        display.style.opacity = 0;
+        display.style.transform = 'translateY(20px)';
+        
+        // 确保容器可见性
+        if (displayContainer) {
+            displayContainer.style.opacity = 0;
+            displayContainer.style.transform = 'translateY(20px)';
+        }
+        
+        setTimeout(() => {
+            display.style.transition = 'all 0.5s ease-in';
+            display.style.opacity = 1;
+            display.style.transform = 'translateY(0)';
+            
+            if (displayContainer) {
+                displayContainer.style.transition = 'all 0.5s ease-in';
+                displayContainer.style.opacity = 1;
+                displayContainer.style.transform = 'translateY(0)';
+            }
+        }, 50);
+    }
+}
+
+// 密码强度指示器更新函数
+function updateStrengthMeter(password) {
+    const strengthMeterContainer = document.getElementById('strengthMeter');
+    const strengthMeter = strengthMeterContainer ? strengthMeterContainer.querySelector('.strength-meter') : null;
+    const passwordDisplay = document.getElementById('passwordDisplay');
+    
+    if (passwordDisplay) {
+        passwordDisplay.textContent = password;
+        passwordDisplay.dataset.realPassword = password;
+    }
+    
+    if (strengthMeter) {
+        const strength = getPasswordStrength(password);
+        const fill = strengthMeter.querySelector('.strength-fill');
+        const label = strengthMeterContainer.querySelector('.strength-label');
+        
+        // 根据强度设置宽度和颜色
+        let widthPercentage = 0;
+        let strengthClass = '';
+        
+        switch(strength) {
+            case 0:
+            case 1:
+                widthPercentage = '16%';
+                strengthClass = 'strength-weak';
+                break;
+            case 2:
+                widthPercentage = '33%';
+                strengthClass = 'strength-medium';
+                break;
+            case 3:
+                widthPercentage = '50%';
+                strengthClass = 'strength-medium';
+                break;
+            case 4:
+                widthPercentage = '66%';
+                strengthClass = 'strength-strong';
+                break;
+            case 5:
+                widthPercentage = '83%';
+                strengthClass = 'strength-strong';
+                break;
+            case 6:
+                widthPercentage = '100%';
+                strengthClass = 'strength-very-strong';
+                break;
+            default:
+                widthPercentage = '0%';
+                strengthClass = 'strength-weak';
+        }
+        
+        // 更新样式
+        if (fill) {
+            fill.style.width = widthPercentage;
+            
+            // 添加过渡效果
+            fill.style.transition = 'all 0.3s ease';
+            
+            // 动态添加强度类
+            fill.className = 'strength-fill'; // 保留基础类
+            fill.classList.add(strengthClass);
+        }
+        
+        // 更新标签文本
+        if (label) {
+            switch(strength) {
+                case 0:
+                case 1:
+                    label.innerHTML = '密码强度: <span>极弱</span>';
+                    break;
+                case 2:
+                    label.innerHTML = '密码强度: <span>较弱</span>';
+                    break;
+                case 3:
+                    label.innerHTML = '密码强度: <span>中等</span>';
+                    break;
+                case 4:
+                    label.innerHTML = '密码强度: <span>较强</span>';
+                    break;
+                case 5:
+                case 6:
+                    label.innerHTML = '密码强度: <span>极强</span>';
+                    break;
+                default:
+                    label.innerHTML = '密码强度: <span>未知</span>';
+            }
+        }
+    }
+}
+
+// 检查并确保所有函数和事件监听器正确闭合

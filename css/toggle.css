@@ -1,0 +1,74 @@
+/* toggle.css - 开关控件样式 */
+
+/* 边框切换样式 */
+.border-toggle {
+    position: relative;
+    display: block;
+    padding: 12px 16px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+    background-color: #f8f9fa;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    user-select: none;
+    font-size: 16px;
+    color: #333;
+}
+
+/* 暗色模式下的边框切换样式 */
+.dark-mode .border-toggle {
+    background-color: #2d2d2d;
+    border-color: #4a4a4a;
+    color: #ffffff;
+}
+
+/* 激活状态的边框切换 */
+.border-toggle.active {
+    border-color: #007BFF;
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+.dark-mode .border-toggle.active {
+    background-color: rgba(0, 123, 255, 0.2);
+}
+
+/* 添加悬停效果 */
+.border-toggle:hover {
+    transform: translateX(4px);
+    background-color: #e9eef4;
+}
+
+.dark-mode .border-toggle:hover {
+    background-color: #3a3a3a;
+}
+
+/* 添加激活时的轻微缩放效果 */
+.border-toggle:active {
+    transform: scale(0.98);
+}
+
+/* 添加内边距以适应文本 */
+.border-toggle-text {
+    position: relative;
+    z-index: 2;
+}
+
+/* 添加选中状态的动画效果 */
+.border-toggle::after {
+    content: "";
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-radius: 8px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.border-toggle.active::after {
+    opacity: 1;
+}

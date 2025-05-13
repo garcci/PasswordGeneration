@@ -41,21 +41,24 @@
             </div>
             
             <button type="submit">生成密码</button>
+            <div class="password-actions">
+                <button type="button" id="copyButton">复制密码</button>
+            </div>
         </form>
 
-        <div class="password-display" id="passwordDisplay"></div>
+        <div class="password-container">
+            <div class="password-display" id="passwordDisplay"></div>
+        </div>
         
         <!-- 密码强度指示器 -->
-        <div class="strength-meter" id="strengthMeter">
-            <div class="strength-bar">
+        <div class="strength-meter-container" id="strengthMeter">
+            <div class="strength-meter">
                 <div class="strength-fill"></div>
             </div>
             <div class="strength-label">
                 密码强度: <span>无</span>
             </div>
         </div>
-        
-        <button type="button" id="copyButton">复制密码</button>
         
         <!-- 密码历史记录 -->
         <div class="password-history">
