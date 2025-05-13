@@ -511,3 +511,156 @@ html {
         background-color: #4a4a4acc;
     }
 }
+
+/* iOS风格滑动条容器 */
+.slider-container {
+    position: relative;
+    width: 100%;
+    margin: 25px 0 15px 0;
+    padding-top: 18px;
+}
+
+/* iOS风格滑动条 */
+.ios-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    background: transparent;
+    outline: none;
+    margin: 0;
+    padding: 0;
+    position: relative;
+    cursor: pointer;
+}
+
+/* 隐藏所有浏览器默认的滑块样式 */
+.ios-slider::-webkit-slider-thumb {
+    display: none;
+}
+
+.ios-slider::-moz-range-thumb {
+    display: none;
+}
+
+.ios-slider::-ms-thumb {
+    display: none;
+}
+
+/* 滑动条轨道（所有浏览器通用） */
+.slider-track {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 6px;
+    transform: translateY(-50%);
+    border-radius: 3px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.1);
+    z-index: 1;
+    pointer-events: auto; /* 确保轨道可以接收事件 */
+}
+
+/* 滑动条填充部分 */
+.slider-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, #007BFF, #00d8ff);
+    will-change: width;
+    transition: width 0.1s ease;
+    pointer-events: auto; /* 确保填充部分可以接收事件 */
+}
+
+/* 显示当前值 */
+.slider-value-display {
+    position: absolute;
+    top: -44px;
+    left: 0;
+    transform: translateX(0%);
+    width: 48px;
+    height: 32px;
+    line-height: 32px;
+    text-align: center;
+    font-size: 16px;
+    color: #fff;
+    background-color: #007BFF;
+    border-radius: 16px;
+    z-index: 3;
+    will-change: transform, left, width, height;
+    pointer-events: none;
+    font-weight: bold;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    backface-visibility: hidden;
+    perspective: 1000;
+    /* 使用单一的过渡属性以提高性能 */
+    transition-property: transform, left;
+    transition-duration: 0.05s;
+    transition-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.slider-value-display::after {
+    content: '';
+    position: absolute;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 7px solid #007BFF;
+    transition: none; /* 箭头不使用过渡 */
+}
+
+/* 滑动条最小值标签 */
+.slider-min-label, .slider-max-label {
+    font-size: 14px;
+    color: #666;
+    position: absolute;
+    top: 0;
+    transform: translateY(-50%);
+    z-index: 2;
+    font-weight: 500;
+}
+
+.slider-min-label {
+    left: 0;
+}
+
+.slider-max-label {
+    right: 0;
+}
+
+/* 活动状态下的高亮效果 */
+.slider-track.active {
+    background-color: rgba(0, 123, 255, 0.2);
+}
+
+.slider-fill.active {
+    box-shadow: 0 0 6px rgba(0, 123, 255, 0.4);
+}
+
+/* 暗色模式支持 */
+.dark-mode .slider-track {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.dark-mode .slider-fill {
+    background: linear-gradient(90deg, #007BFF, #00d8ff);
+}
+
+.dark-mode .slider-min-label,
+.dark-mode .slider-max-label {
+    color: #cccccc;
+}
+
+.dark-mode .slider-track.active {
+    background-color: rgba(0, 123, 255, 0.3);
+}
+
+.dark-mode .slider-fill.active {
+    box-shadow: 0 0 6px rgba(0, 123, 255, 0.6);
+}

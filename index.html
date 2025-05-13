@@ -10,7 +10,13 @@
         <h1>随机安全密码生成器</h1>
         <form id="passwordForm">
             <label for="length">密码长度:</label>
-            <input type="number" id="length" name="length" min="8" max="128" value="12" required>
+            <!-- iOS风格线性滑动条 -->
+            <div class="slider-container" id="lengthSlider">
+                <div class="slider-min-label">8</div>
+                <input type="range" id="length" name="length" min="8" max="128" value="12" class="ios-slider">
+                <div class="slider-max-label">128</div>
+                <div class="slider-value-display">12</div>
+            </div>
 
             <div class="checkbox-group">
                 <label><input type="checkbox" id="uppercase" checked> 大写字母</label>

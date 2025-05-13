@@ -1,0 +1,108 @@
+// 密码字符集
+const charSets = {
+    uppercase: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+    lowercase: 'abcdefghijklmnopqrstuvwxyz',
+    numbers: '0123456789',
+    symbols: '!@#$%^&*()_+{}[]=<>/.,?~' + "-:\"|';:`"
+};
+
+// 处理密码生成请求
+self.onmessage = function(e) {
+    try {
+        // 获取参数
+        const { config } = e.data;
+        
+        // 验证配置
+        if (!config || typeof config !== 'object') {
+            throw new Error('无效的配置');
+        }
+        
+        // 生成密码
+        let password = '';
+        const availableCharSets = [];
+        
+        if (config.uppercase) availableCharSets.push('uppercase');
+        if (config.lowercase) availableCharSets.push('lowercase');
+        if (config.numbers) availableCharSets.push('numbers');
+        if (config.symbols) availableCharSets.push('symbols');
+        
+        // 验证至少有一个字符类型被选中
+        if (availableCharSets.length === 0) {
+            throw new Error('至少需要选择一种字符类型');
+        }
+        
+        // 确保每种选中的字符类型都有至少一个字符
+        availableCharSets.forEach(setName => {
+            const charSet = charSets[setName];
+            password += charSet[Math.floor(Math.random() * charSet.length)];
+        });
+        
+        // 如果密码长度不足指定长度，补充随机字符
+        while (password.length < config.length) {
+            const randomSet = availableCharSets[Math.floor(Math.random() * availableCharSets.length)];
+            const charSet = charSets[randomSet];
+            password += charSet[Math.floor(Math.random() * charSet.length)];
+        }
+        
+        // 将密码转换为数组进行随机排序
+        password = password.split('').sort(() => Math.random() - 0.5).join('');
+        
+        // 确保字母开头的规则
+        if ((config.uppercase || config.lowercase) && !/^[a-zA-Z]/.test(password)) {
+            // 找到第一个字母的位置
+            for (let i = 0; i < password.length; i++) {
+                if (/[a-zA-Z]/.test(password[i])) {
+                    // 将第一个字母移到开头
+                    password = password[i] + password.slice(0, i) + password.slice(i + 1);
+                    break;
+                }
+            }
+        }
+        
+        // 确保大写字母开头的规则（当同时选择了大小写）
+        if (config.uppercase && config.lowercase) {
+            let firstUpperCaseIndex = -1;
+            for (let i = 0; i < password.length; i++) {
+                if (/[A-Z]/.test(password[i])) {
+                    firstUpperCaseIndex = i;
+                    break;
+                }
+            }
+            
+            if (firstUpperCaseIndex !== -1 && firstUpperCaseIndex !== 0) {
+                // 将第一个大写字母移到开头
+                password = password[firstUpperCaseIndex] + password.slice(0, firstUpperCaseIndex) + password.slice(firstUpperCaseIndex + 1);
+            }
+        }
+        
+        // 返回结果给主线程
+        self.postMessage({ 
+            password,
+            strength: getPasswordStrength(password)
+        });
+    } catch (error) {
+        self.postMessage({ error: error.message });
+    }
+};
+
+// 获取密码强度评估
+function getPasswordStrength(password) {
+    if (!password) return 0;
+    
+    let strength = 0;
+    if (password.length >= 12) strength += 2;
+    else if (password.length >= 8) strength += 1;
+    
+    // 检查字符多样性
+    const hasUppercase = /[A-Z]/.test(password);
+    const hasLowercase = /[a-z]/.test(password);
+    const hasNumbers = /[0-9]/.test(password);
+    const hasSymbols = /[^A-Za-z0-9]/.test(password);
+    
+    if (hasUppercase) strength++;
+    if (hasLowercase) strength++;
+    if (hasNumbers) strength++;
+    if (hasSymbols) strength++;
+    
+    return Math.min(strength, 6);
+}

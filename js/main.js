@@ -7,6 +7,140 @@ function debounce(func, delay) {
   };
 }
 
+// 添加滑动条交互功能
+function initPasswordSlider() {
+    const sliderContainer = document.getElementById('lengthSlider');
+    if (!sliderContainer) return;
+    
+    const slider = sliderContainer.querySelector('.ios-slider');
+    if (!slider) return;
+    
+    // 创建轨道元素（如果不存在）
+    if (!sliderContainer.querySelector('.slider-track')) {
+        const track = document.createElement('div');
+        track.className = 'slider-track';
+        
+        const fill = document.createElement('div');
+        fill.className = 'slider-fill';
+        
+        track.appendChild(fill);
+        sliderContainer.appendChild(track);
+    }
+    
+    const valueDisplay = sliderContainer.querySelector('.slider-value-display');
+    const track = sliderContainer.querySelector('.slider-track');
+    const fill = sliderContainer.querySelector('.slider-fill');
+    
+    // 滑动事件处理函数
+    function updateSlider() {
+        // 更新填充宽度
+        if (fill) {
+            const min = parseInt(slider.min) || 8;
+            const max = parseInt(slider.max) || 128;
+            const percent = ((slider.value - min) / (max - min)) * 100;
+            fill.style.width = `${percent}%`;
+        }
+        
+        // 更新显示值和位置
+        if (valueDisplay) {
+            valueDisplay.textContent = slider.value;
+            
+            // 使用transform进行位置更新
+            const min = parseInt(slider.min) || 8;
+            const max = parseInt(slider.max) || 128;
+            const percent = ((slider.value - min) / (max - min)) * 100;
+            valueDisplay.style.transform = `translateX(${percent}%)
+                                          translateX(-24px)`;
+        }
+    }
+    
+    // 初始更新
+    updateSlider();
+    
+    // 设置初始值
+    const savedConfig = localStorage.getItem('passwordConfig');
+    if (savedConfig) {
+        try {
+            const config = JSON.parse(savedConfig);
+            slider.value = config.length || 12;
+        } catch (error) {
+            console.error('配置解析失败:', error);
+            slider.value = 12;
+        }
+    } else {
+        slider.value = 12;
+    }
+    
+    // 更新显示
+    updateSlider();
+    
+    // 添加触摸区域交互（使用整个容器作为触摸区域）
+    sliderContainer.addEventListener('mousedown', (e) => {
+        e.preventDefault(); // 防止选择等默认行为
+        updateValueFromPosition(e.clientX);
+        
+        const handleMouseMove = (e) => {
+            updateValueFromPosition(e.clientX);
+            requestAnimationFrame(updateSlider);
+        };
+        
+        const stopDragging = () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', stopDragging);
+        };
+        
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', stopDragging);
+    });
+    
+    // 触摸事件（移动设备）
+    sliderContainer.addEventListener('touchstart', (e) => {
+        e.preventDefault(); // 阻止默认的触摸行为
+        
+        if (e.touches.length === 1) {
+            updateValueFromPosition(e.touches[0].clientX);
+            
+            const handleTouchMove = (e) => {
+                e.preventDefault(); // 阻止默认滚动
+                
+                if (e.touches.length === 1) {
+                    updateValueFromPosition(e.touches[0].clientX);
+                    requestAnimationFrame(updateSlider);
+                }
+            };
+            
+            const stopTouch = () => {
+                document.removeEventListener('touchmove', handleTouchMove);
+                document.removeEventListener('touchend', stopTouch);
+            };
+            
+            document.addEventListener('touchmove', handleTouchMove);
+            document.addEventListener('touchend', stopTouch);
+        }
+    });
+    
+    // 计算点击位置并更新滑动条值
+    function updateValueFromPosition(clientX) {
+        const rect = sliderContainer.getBoundingClientRect();
+        const pos = clientX - rect.left;
+        const percent = pos / rect.width;
+        let newValue = Math.round(percent * (slider.max - slider.min)) + parseInt(slider.min);
+        
+        // 限制最小值为8
+        newValue = Math.max(parseInt(slider.min), newValue);
+        // 限制最大值为128
+        newValue = Math.min(parseInt(slider.max), newValue);
+        
+        slider.value = newValue;
+        // 手动触发input事件以更新界面
+        const inputEvent = new Event('input', { bubbles: true });
+        slider.dispatchEvent(inputEvent);
+        
+        // 触发自定义更新
+        updateSlider();
+    }
+}
+
 // 当DOM加载完成后初始化
 document.addEventListener('DOMContentLoaded', function() {
     // 检查是否所有需要的元素都存在
@@ -25,6 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (missingElements.length === 0) {
         init();
+        initPasswordSlider(); // 初始化密码长度滑动条
     } else {
         console.error('缺少必要DOM元素:', missingElements);
         // 设置一个观察器，在元素准备好后初始化
@@ -118,6 +253,71 @@ function init() {
         });
     });
     
+    // 初始化Web Worker
+    let passwordWorker = null;
+
+    // 检查浏览器是否支持Web Worker
+    if (typeof(Worker) !== "undefined") {
+        passwordWorker = new Worker("js/utils/password-worker.js");
+        
+        // 设置消息处理
+        passwordWorker.onmessage = function(event) {
+            if (event.data.error) {
+                console.error('密码生成错误:', event.data.error);
+                alert(event.data.error);
+                return;
+            }
+            
+            const password = event.data.password;
+            
+            // 显示密码并添加动画效果
+            const display = document.getElementById('passwordDisplay');
+            if (display) {
+                display.textContent = password;
+                display.style.opacity = 0;
+                display.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    display.style.transition = 'all 0.5s ease-in';
+                    display.style.opacity = 1;
+                    display.style.transform = 'translateY(0)';
+                }, 50);
+            }
+            
+            // 更新密码强度指示器
+            const strengthMeter = document.getElementById('strengthMeter');
+            if (strengthMeter) {
+                updateStrengthMeter(password);
+            }
+            
+            // 添加按钮点击反馈动画
+            const button = form.querySelector('button');
+            if (button) {
+                button.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    button.style.transform = 'scale(1.05)';
+                }, 200);
+                setTimeout(() => {
+                    button.style.transform = 'scale(1)';
+                }, 400);
+            }
+            
+            // 分析密码
+            analyzePassword(password);
+            
+            // 如果在暗色模式下，确保元素正确显示
+            if (document.body.classList.contains('dark-mode')) {
+                updateDarkModeStyles();
+            }
+        };
+        
+        passwordWorker.onerror = function(error) {
+            console.error('Web Worker错误:', error);
+            alert('密码生成功能受限，请刷新页面重试');
+        };
+    } else {
+        console.warn('Web Worker不支持，将使用主线程生成密码');
+    }
+    
     // 表单提交处理
     const form = document.getElementById('passwordForm');
     form.addEventListener('submit', debounce(function(e) {
@@ -129,13 +329,6 @@ function init() {
         if (e && e.stopPropagation) {
             e.stopPropagation();
         }
-        
-        // 移除不兼容的window.event.returnValue方式
-        // 用CSS类的方式替代实现防止刷新
-        document.body.classList.add('prevent-refresh');
-        setTimeout(() => {
-            document.body.classList.remove('prevent-refresh');
-        }, 10);
         
         try {
             // 获取表单值
@@ -192,43 +385,57 @@ function init() {
             
             localStorage.setItem('passwordConfig', JSON.stringify(currentConfig));
             
-            // 使用密码管理器更新配置
+            // 使用密码管理器更新配置（如果可用）
             if (window.PasswordManager && window.PasswordManager.updateConfig) {
                 window.PasswordManager.updateConfig(currentConfig);
             }
             
-            // 使用密码管理器生成唯一密码（传递当前配置）
-            const password = window.PasswordManager.generateUniquePassword(currentConfig);
-            
-            // 显示密码并添加动画效果
-            const display = document.getElementById('passwordDisplay');
-            if (display) {
-                display.textContent = password;
-                display.style.opacity = 0;
-                display.style.transform = 'translateY(20px)';
-                setTimeout(() => {
-                    display.style.transition = 'all 0.5s ease-in';
-                    display.style.opacity = 1;
-                    display.style.transform = 'translateY(0)';
-                }, 50);
-            }
-            
-            // 更新密码强度指示器
-            const strengthMeter = document.getElementById('strengthMeter');
-            if (strengthMeter) {
-                updateStrengthMeter(password);
-            }
-            
-            // 添加按钮点击反馈动画
-            const button = form.querySelector('button');
-            if (button) {
-                button.style.transform = 'scale(0.95)';
-                setTimeout(() => {
-                    button.style.transform = 'scale(1.05)';
-                }, 200);
-                setTimeout(() => {
-                    button.style.transform = 'scale(1)';
-                }, 400);
+            // 使用Web Worker生成密码
+            if (passwordWorker) {
+                passwordWorker.postMessage({ config: currentConfig });
+            } else {
+                // 回退到主线程生成密码
+                const options = { uppercase, lowercase, numbers, symbols };
+                const password = generateSecurePassword(length, options);
+                
+                // 显示密码并添加动画效果
+                const display = document.getElementById('passwordDisplay');
+                if (display) {
+                    display.textContent = password;
+                    display.style.opacity = 0;
+                    display.style.transform = 'translateY(20px)';
+                    setTimeout(() => {
+                        display.style.transition = 'all 0.5s ease-in';
+                        display.style.opacity = 1;
+                        display.style.transform = 'translateY(0)';
+                    }, 50);
+                }
+                
+                // 更新密码强度指示器
+                const strengthMeter = document.getElementById('strengthMeter');
+                if (strengthMeter) {
+                    updateStrengthMeter(password);
+                }
+                
+                // 添加按钮点击反馈动画
+                const button = form.querySelector('button');
+                if (button) {
+                    button.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        button.style.transform = 'scale(1.05)';
+                    }, 200);
+                    setTimeout(() => {
+                        button.style.transform = 'scale(1)';
+                    }, 400);
+                }
+                
+                // 分析密码
+                analyzePassword(password);
+                
+                // 如果在暗色模式下，确保元素正确显示
+                if (document.body.classList.contains('dark-mode')) {
+                    updateDarkModeStyles();
+                }
             }
             
             // 添加复制功能
@@ -252,14 +459,11 @@ function init() {
                         console.error('复制到剪贴板失败: ', err);
                         alert('复制到剪贴板失败，请手动复制');
                         
-                        // 如果复制失败，也尝试添加到历史记录（作为备用）
+                        // 如果复制失败，也尝试添加到历史记录（作为备份）
                         addPasswordToHistory(password);
                     });
                 };
             }
-            
-            // 分析密码
-            analyzePassword(password);
             
         } catch (error) {
             console.error('密码生成错误:', error);
@@ -301,4 +505,7 @@ function init() {
             form._listenerAdded = true;
         }
     }, 100);
+
+    // 初始化密码长度滑动条
+    initPasswordSlider();
 }
