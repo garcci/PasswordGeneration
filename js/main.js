@@ -27,7 +27,7 @@ function initPasswordSlider() {
         sliderContainer.appendChild(track);
     }
     
-    const valueDisplay = sliderContainer.querySelector('.slider-value-display');
+    const valueDisplay = sliderContainer.querySelector('.dynamic-value-tooltip');
     const track = sliderContainer.querySelector('.slider-track');
     const fill = sliderContainer.querySelector('.slider-fill');
     
@@ -45,12 +45,14 @@ function initPasswordSlider() {
         if (valueDisplay) {
             valueDisplay.textContent = slider.value;
             
-            // 使用transform进行位置更新
+            // 调整显示位置以跟随当前百分比
             const min = parseInt(slider.min) || 8;
             const max = parseInt(slider.max) || 128;
             const percent = ((slider.value - min) / (max - min)) * 100;
+            
+            // 使用transform进行位置更新
             valueDisplay.style.transform = `translateX(${percent}%)
-                                          translateX(-24px)`;
+                                          translateX(-50%)`;
         }
     }
     
@@ -76,10 +78,11 @@ function initPasswordSlider() {
     
     // 添加触摸区域交互（使用整个容器作为触摸区域）
     sliderContainer.addEventListener('mousedown', (e) => {
-        e.preventDefault(); // 防止选择等默认行为
+        e.preventDefault();
         updateValueFromPosition(e.clientX);
         
         const handleMouseMove = (e) => {
+            e.preventDefault();
             updateValueFromPosition(e.clientX);
             requestAnimationFrame(updateSlider);
         };
@@ -95,13 +98,13 @@ function initPasswordSlider() {
     
     // 触摸事件（移动设备）
     sliderContainer.addEventListener('touchstart', (e) => {
-        e.preventDefault(); // 阻止默认的触摸行为
+        e.preventDefault();
         
         if (e.touches.length === 1) {
             updateValueFromPosition(e.touches[0].clientX);
             
             const handleTouchMove = (e) => {
-                e.preventDefault(); // 阻止默认滚动
+                e.preventDefault();
                 
                 if (e.touches.length === 1) {
                     updateValueFromPosition(e.touches[0].clientX);
@@ -141,7 +144,7 @@ function initPasswordSlider() {
     }
 }
 
-// 当DOM加载完成后初始化
+// 在DOM加载后初始化
 document.addEventListener('DOMContentLoaded', function() {
     // 检查是否所有需要的元素都存在
     const requiredElements = [
@@ -159,7 +162,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (missingElements.length === 0) {
         init();
-        initPasswordSlider(); // 初始化密码长度滑动条
+        initPasswordSlider();
+        
+        // 初始化开关样式
+        document.querySelectorAll('.ios-switch').forEach(switchElement => {
+            switchElement.style.setProperty('--track-color', '#007BFF');
+            switchElement.style.setProperty('--thumb-color', 'white');
+        });
     } else {
         console.error('缺少必要DOM元素:', missingElements);
         // 设置一个观察器，在元素准备好后初始化
@@ -168,11 +177,67 @@ document.addEventListener('DOMContentLoaded', function() {
             if (stillMissing.length === 0) {
                 observer.disconnect();
                 init();
+                initPasswordSlider();
+                
+                // 初始化开关样式
+                document.querySelectorAll('.ios-switch').forEach(switchElement => {
+                    switchElement.style.setProperty('--track-color', '#007BFF');
+                    switchElement.style.setProperty('--thumb-color', 'white');
+                });
             }
         });
         
         observer.observe(document.body, { childList: true, subtree: true });
     }
+    
+    // 初始化边框切换控件
+    document.querySelectorAll('.border-toggle').forEach(toggle => {
+        // 从localStorage获取初始状态
+        const inputId = toggle.getAttribute('for');
+        const savedConfig = localStorage.getItem('passwordConfig');
+        let initialState = true;
+        
+        if (savedConfig) {
+            try {
+                const config = JSON.parse(savedConfig);
+                initialState = config[inputId] !== undefined ? config[inputId] : true;
+            } catch (error) {
+                console.error('配置解析失败:', error);
+            }
+        }
+        
+        // 设置初始状态
+        if (initialState) {
+            toggle.classList.add('active');
+        }
+        
+        // 添加点击事件监听器
+        toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // 切换active类
+            toggle.classList.toggle('active');
+            
+            // 更新隐藏的复选框状态（如果存在）
+            const checkbox = document.getElementById(inputId);
+            if (checkbox) {
+                checkbox.checked = toggle.classList.contains('active');
+                
+                // 触发表单提交以生成新密码
+                const form = document.getElementById('passwordForm');
+                if (form && form.onsubmit) {
+                    form.onsubmit();
+                } else {
+                    // 如果没有表单提交处理程序，直接生成密码
+                    const event = new Event('submit', { bubbles: true, cancelable: true });
+                    if (form) {
+                        form.dispatchEvent(event);
+                    }
+                }
+            }
+        });
+    });
 });
 
 // 初始化函数
@@ -184,6 +249,14 @@ function init() {
     if (savedConfig) {
         try {
             config = JSON.parse(savedConfig);
+            
+            // 设置开关初始状态
+            ['uppercase', 'lowercase', 'numbers', 'symbols'].forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.checked = Boolean(config[id]);
+                }
+            });
         } catch (error) {
             console.error('配置解析失败:', error);
         }
@@ -508,4 +581,40 @@ function init() {
 
     // 初始化密码长度滑动条
     initPasswordSlider();
+    
+    // 初始化边框切换控件状态
+    document.querySelectorAll('.border-toggle').forEach(toggle => {
+        const inputId = toggle.getAttribute('for');
+        const element = document.getElementById(inputId);
+        
+        if (element && element.type === 'checkbox') {
+            if (element.checked) {
+                toggle.classList.add('active');
+            }
+            
+            // 确保事件监听器已添加
+            const existingListener = toggle.getAttribute('data-listener-added');
+            if (!existingListener) {
+                toggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // 切换active类
+                    toggle.classList.toggle('active');
+                    
+                    // 更新隐藏的复选框状态
+                    element.checked = toggle.classList.contains('active');
+                    
+                    // 触发表单提交以生成新密码
+                    const event = new Event('submit', { bubbles: true, cancelable: true });
+                    const form = document.getElementById('passwordForm');
+                    if (form) {
+                        form.dispatchEvent(event);
+                    }
+                });
+                
+                toggle.setAttribute('data-listener-added', 'true');
+            }
+        }
+    });
 }
