@@ -69,26 +69,67 @@ function loadPasswordHistory() {
 
 // 将密码添加到历史记录
 function addPasswordToHistory(password) {
-    let history = JSON.parse(localStorage.getItem('passwordHistory') || '[]');
+    if (!password) return;
     
-    // 移除已存在的相同密码（避免重复）
-    history = history.filter(item => item.password !== password);
+    const passwordList = document.getElementById('passwordHistoryList');
+    if (!passwordList) return;
     
-    // 添加新密码到开头
-    history.unshift({
-        password: password,
-        timestamp: new Date().toISOString()
-    });
+    // 创建新条目
+    const historyItem = document.createElement('li');
     
-    // 保持最多5条记录
-    if (history.length > 5) {
-        history = history.slice(0, 5);
+    // 保留前6位和后6位，中间用...代替
+    let displayPassword = password;
+    if (password.length > 12) {
+        displayPassword = password.substring(0, 6) + '...' + password.substring(password.length - 6);
     }
     
-    localStorage.setItem('passwordHistory', JSON.stringify(history));
+    // 创建密码显示容器
+    const passwordDisplay = document.createElement('div');
+    passwordDisplay.className = 'history-password-display';
+    passwordDisplay.textContent = displayPassword;
     
-    // 更新历史记录显示
-    loadPasswordHistory();
+    // 创建操作按钮
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'history-item-buttons';
+    
+    // 复制按钮
+    const copyButton = document.createElement('button');
+    copyButton.className = 'copy-history-button';
+    copyButton.textContent = '复制';
+    
+    // 复制按钮点击事件
+    copyButton.addEventListener('click', () => {
+        navigator.clipboard.writeText(password).then(() => {
+            // 修改按钮样式以提供视觉反馈
+            copyButton.textContent = '已复制';
+            copyButton.style.backgroundColor = '#28a745';
+            
+            setTimeout(() => {
+                copyButton.textContent = '复制';
+                copyButton.style.backgroundColor = '';
+            }, 2000);
+        }).catch(err => {
+            console.error('复制到剪贴板失败: ', err);
+            alert('复制到剪贴板失败，请手动复制');
+        });
+    });
+    
+    // 删除按钮
+    const deleteButton = document.createElement('button');
+    deleteButton.className = 'copy-history-button';
+    deleteButton.textContent = '删除';
+    deleteButton.onclick = () => removeHistoryPassword(index);
+    
+    // 将按钮添加到按钮容器
+    buttonContainer.appendChild(copyButton);
+    buttonContainer.appendChild(deleteButton);
+    
+    // 将密码显示和按钮容器添加到条目
+    historyItem.appendChild(passwordDisplay);
+    historyItem.appendChild(buttonContainer);
+    
+    // 将条目添加到列表
+    passwordList.insertBefore(historyItem, passwordList.firstChild);
 }
 
 // 复制历史记录中的密码

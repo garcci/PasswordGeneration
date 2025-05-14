@@ -220,24 +220,40 @@ button:active {
 
 /* 强度颜色 */
 .strength-weak {
-    background-color: #ff4d4d;
+    background: linear-gradient(90deg, #ff4d4d, #ff734d);
 }
 
 .strength-medium {
-    background-color: #ffa500;
+    background: linear-gradient(90deg, #ffa500, #ffbb33);
 }
 
 .strength-strong {
-    background-color: #00c853;
+    background: linear-gradient(90deg, #00c853, #33cc33);
 }
 
 .strength-very-strong {
-    background-color: #007BFF;
+    background: linear-gradient(90deg, #007BFF, #00d8ff);
 }
 
 /* 暗色模式下的密码强度指示器 */
 .dark-mode .strength-meter {
     background-color: #3a3a3a;
+}
+
+.dark-mode .strength-fill.strength-weak {
+    background: linear-gradient(90deg, #ff4d4d, #ff734d);
+}
+
+.dark-mode .strength-fill.strength-medium {
+    background: linear-gradient(90deg, #ffa500, #ffbb33);
+}
+
+.dark-mode .strength-fill.strength-strong {
+    background: linear-gradient(90deg, #00c853, #33cc33);
+}
+
+.dark-mode .strength-fill.strength-very-strong {
+    background: linear-gradient(90deg, #007BFF, #00d8ff);
 }
 
 .dark-mode .strength-label {
@@ -1011,4 +1027,125 @@ html {
 .dark-mode .dynamic-value-tooltip {
     background-color: #007BFF;
     color: #ffffff;
+}
+
+/* 密码历史记录 */
+.password-history {
+    margin-top: 25px;
+    padding-top: 15px;
+    border-top: 1px solid #e9ecef;
+}
+
+.dark-mode .password-history {
+    border-top: 1px solid #4a4a4a;
+}
+
+.password-history h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 18px;
+    color: #333;
+}
+
+.dark-mode .password-history h3 {
+    color: #ffffff;
+}
+
+#passwordHistoryList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 12px;
+}
+
+#passwordHistoryList li {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+/* 历史密码显示容器 */
+.history-password-display {
+    flex-grow: 1;
+    font-family: monospace;
+    font-size: 15px;
+    color: #333;
+    word-break: break-all;
+}
+
+.dark-mode .history-password-display {
+    color: #ffffff;
+}
+
+/* 按钮容器 */
+.history-item-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+#passwordHistoryList li:hover {
+    background-color: #e9eef4;
+    transform: translateX(4px);
+}
+
+.dark-mode #passwordHistoryList li {
+    background-color: #2d2d2d;
+    border-color: #4a4a4a;
+    color: #ffffff;
+}
+
+.dark-mode #passwordHistoryList li:hover {
+    background-color: #3a3a3a;
+    transform: translateX(4px);
+}
+
+.copy-history-button {
+    background-color: transparent;
+    border: 1px solid #007BFF;
+    color: #007BFF;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.copy-history-button:hover {
+    background-color: #007BFF;
+    color: #ffffff;
+    transform: scale(1.05);
+}
+
+.dark-mode .copy-history-button {
+    border-color: #00d8ff;
+    color: #00d8ff;
+}
+
+.dark-mode .copy-history-button:hover {
+    background-color: #00d8ff;
+    color: #121212;
+    transform: scale(1.05);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    #passwordHistoryList li {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .copy-history-button {
+        margin-top: 8px;
+        padding: 6px 10px;
+        font-size: 13px;
+    }
 }
