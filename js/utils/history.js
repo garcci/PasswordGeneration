@@ -67,10 +67,11 @@ function loadPasswordHistory() {
     }
 }
 
-// 将密码添加到历史记录
+// 添加密码到历史记录
 function addPasswordToHistory(password) {
     if (!password) return;
     
+    // 获取历史记录列表
     const passwordList = document.getElementById('passwordHistoryList');
     if (!passwordList) return;
     
@@ -114,22 +115,57 @@ function addPasswordToHistory(password) {
         });
     });
     
-    // 删除按钮
-    const deleteButton = document.createElement('button');
-    deleteButton.className = 'copy-history-button';
-    deleteButton.textContent = '删除';
-    deleteButton.onclick = () => removeHistoryPassword(index);
-    
-    // 将按钮添加到按钮容器
+    // 将元素组装到DOM中
     buttonContainer.appendChild(copyButton);
-    buttonContainer.appendChild(deleteButton);
-    
-    // 将密码显示和按钮容器添加到条目
     historyItem.appendChild(passwordDisplay);
     historyItem.appendChild(buttonContainer);
-    
-    // 将条目添加到列表
     passwordList.insertBefore(historyItem, passwordList.firstChild);
+    
+    // 限制历史记录数量
+    const maxHistoryItems = 10;
+    while (passwordList.children.length > maxHistoryItems) {
+        passwordList.removeChild(passwordList.lastChild);
+    }
+    
+    // 更新localStorage中的历史记录
+    updateLocalStorageHistory(password);
+}
+
+// 更新localStorage中的历史记录
+function updateLocalStorageHistory(newPassword) {
+    try {
+        // 获取现有历史记录
+        const historyData = localStorage.getItem('passwordHistory');
+        let history = [];
+        
+        if (historyData) {
+            try {
+                history = JSON.parse(historyData);
+            } catch (parseError) {
+                console.error('解析历史记录失败:', parseError);
+            }
+        }
+        
+        // 添加新密码到数组开头
+        history.unshift(newPassword);
+        
+        // 去重（保持唯一性）
+        history = [...new Set(history)];
+        
+        // 限制历史记录数量
+        if (history.length > 10) {
+            history = history.slice(0, 10);
+        }
+        
+        // 保存回localStorage
+        localStorage.setItem('passwordHistory', JSON.stringify(history));
+        
+        // 触发历史记录更新事件（如果其他组件需要监听）
+        const event = new CustomEvent('passwordHistoryUpdated', { detail: { history: history } });
+        window.dispatchEvent(event);
+    } catch (error) {
+        console.error('更新历史记录失败:', error);
+    }
 }
 
 // 复制历史记录中的密码
@@ -153,3 +189,18 @@ function removeHistoryPassword(index) {
         showConfigMessage('密码已从历史记录中删除', 'success');
     }
 }
+
+// 导出函数
+// 使用IIFE模式导出函数到全局对象
+(function() {
+    const exportedFunctions = {
+        addPasswordToHistory: addPasswordToHistory
+    };
+
+    // 在非模块环境中，将函数附加到window对象
+    if (typeof module === 'undefined' || !module.exports) {
+        window.historyUtils = exportedFunctions;
+    } else {
+        module.exports = exportedFunctions;
+    }
+})();

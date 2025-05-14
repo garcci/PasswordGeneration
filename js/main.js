@@ -12,9 +12,6 @@ function initPasswordSlider() {
     const sliderContainer = document.getElementById('lengthSlider');
     if (!sliderContainer) return;
     
-    const slider = sliderContainer.querySelector('.ios-slider');
-    if (!slider) return;
-    
     // 创建轨道元素（如果不存在）
     if (!sliderContainer.querySelector('.slider-track')) {
         const track = document.createElement('div');
@@ -30,6 +27,7 @@ function initPasswordSlider() {
     const valueDisplay = sliderContainer.querySelector('.dynamic-value-tooltip');
     const track = sliderContainer.querySelector('.slider-track');
     const fill = sliderContainer.querySelector('.slider-fill');
+    const slider = sliderContainer.querySelector('.ios-slider'); // 修复slider变量定义
     
     // 滑动事件处理函数
     function updateSlider() {
@@ -234,7 +232,221 @@ function initCopyButton() {
 }
 
 // 移除了initViewButton函数
-// 初始化函数
+// 在文件顶部添加组件相关变量
+let strengthMeterModule;
+let passwordDisplayModule;
+let passwordHistoryModule;
+let passwordWorker = null;
+
+// 添加配置消息显示函数
+function showConfigMessage(message, type = 'info') {
+    // 创建消息容器（如果不存在）
+    let messageContainer = document.getElementById('configMessage');
+    if (!messageContainer) {
+        messageContainer = document.createElement('div');
+        messageContainer.id = 'configMessage';
+        messageContainer.className = `config-message ${type}`;
+
+        // 设置基本样式
+        messageContainer.style.position = 'fixed';
+        messageContainer.style.top = '20px';
+        messageContainer.style.right = '20px';
+        messageContainer.style.padding = '12px 24px';
+        messageContainer.style.borderRadius = '8px';
+        messageContainer.style.zIndex = '1000';
+        messageContainer.style.opacity = '0';
+        messageContainer.style.transition = 'opacity 0.3s ease';
+        messageContainer.style.fontFamily = 'Arial, sans-serif';
+        messageContainer.style.fontSize = '15px';
+
+        // 根据类型设置样式
+        switch(type) {
+            case 'success':
+                messageContainer.style.backgroundColor = '#28a745';
+                messageContainer.style.color = '#ffffff';
+                break;
+            case 'error':
+                messageContainer.style.backgroundColor = '#dc3545';
+                messageContainer.style.color = '#ffffff';
+                break;
+            default:
+                messageContainer.style.backgroundColor = '#007BFF';
+                messageContainer.style.color = '#ffffff';
+        }
+
+        document.body.appendChild(messageContainer);
+    }
+
+    // 更新消息内容和显示
+    messageContainer.textContent = message;
+    messageContainer.style.display = 'block';
+    messageContainer.style.opacity = '1';
+
+    // 隐藏现有消息并显示新消息
+    hideConfigMessage();
+    setTimeout(() => {
+        messageContainer.style.opacity = '1';
+    }, 10);
+
+    // 3秒后自动隐藏
+    setTimeout(() => {
+        hideConfigMessage();
+    }, 3000);
+}
+
+// 隐藏配置消息的函数
+function hideConfigMessage() {
+    const messageContainer = document.getElementById('configMessage');
+    if (messageContainer) {
+        messageContainer.style.opacity = '0';
+        setTimeout(() => {
+            messageContainer.style.display = 'none';
+        }, 300);
+    }
+}
+
+// 动态加载组件（模拟ES6 import的替代方案）
+function loadComponents() {
+    // 加载密码强度指示器组件
+    const strengthMeterScript = document.createElement('script');
+    strengthMeterScript.src = 'js/components/strength-meter.js';
+    document.head.appendChild(strengthMeterScript);
+    
+    // 加载密码显示组件
+    const passwordDisplayScript = document.createElement('script');
+    passwordDisplayScript.src = 'js/components/password-display.js';
+    document.head.appendChild(passwordDisplayScript);
+    
+    // 加载密码历史记录组件
+    const passwordHistoryScript = document.createElement('script');
+    passwordHistoryScript.src = 'js/components/password-history.js';
+    document.head.appendChild(passwordHistoryScript);
+    
+    // 使用setTimeout等待脚本加载
+    setTimeout(() => {
+        strengthMeterModule = window.StrengthMeter;
+        passwordDisplayModule = window.PasswordDisplay;
+        passwordHistoryModule = window.PasswordHistory;
+        
+        // 初始化所有组件
+        if (typeof initStrengthMeter === 'function') {
+            initStrengthMeter();
+        }
+        if (typeof initPasswordDisplay === 'function') {
+            initPasswordDisplay();
+        }
+        if (typeof initPasswordHistory === 'function') {
+            initPasswordHistory();
+        }
+        
+        // 使用historyUtils加载历史记录并在加载后渲染每个密码
+        const history = window.historyUtils ? window.historyUtils.addPasswordToHistory : null;
+        if (history) {
+            const storedHistory = JSON.parse(localStorage.getItem('passwordHistory') || '[]');
+            storedHistory.forEach(password => {
+                window.PasswordHistory.renderPasswordHistory(password);
+            });
+        }
+    }, 100);
+}
+
+// 添加新的历史记录加载函数
+function loadPasswordHistory() {
+    try {
+        // 获取历史记录容器
+        const passwordList = document.getElementById('passwordHistoryList');
+        if (!passwordList) return;
+        
+        // 从localStorage获取历史记录
+        const historyData = localStorage.getItem('passwordHistory');
+        if (!historyData) return;
+        
+        let history = [];
+        try {
+            history = JSON.parse(historyData);
+        } catch (parseError) {
+            console.error('解析历史记录失败:', parseError);
+            return;
+        }
+        
+        // 清空现有列表
+        passwordList.innerHTML = '';
+        
+        // 如果没有历史记录则显示提示信息
+        if (!history || history.length === 0) {
+            const emptyItem = document.createElement('li');
+            emptyItem.className = 'history-empty';
+            emptyItem.textContent = '暂无复制过的密码';
+            passwordList.appendChild(emptyItem);
+            return;
+        }
+        
+        // 创建历史记录项
+        history.forEach(password => {
+            // 创建新条目
+            const historyItem = document.createElement('li');
+            
+            // 保留前6位和后6位，中间用...代替
+            let displayPassword = password;
+            if (password && password.length > 12) {
+                displayPassword = password.substring(0, 6) + '...' + password.substring(password.length - 6);
+            }
+            
+            // 创建密码显示容器
+            const passwordDisplay = document.createElement('div');
+            passwordDisplay.className = 'history-password-display';
+            passwordDisplay.textContent = displayPassword;
+            
+            // 创建操作按钮
+            const buttonContainer = document.createElement('div');
+            buttonContainer.className = 'history-item-buttons';
+            
+            // 复制按钮
+            const copyButton = document.createElement('button');
+            copyButton.className = 'copy-history-button';
+            copyButton.textContent = '复制';
+            
+            // 复制按钮点击事件
+            copyButton.addEventListener('click', () => {
+                navigator.clipboard.writeText(password).then(() => {
+                    // 修改按钮样式以提供视觉反馈
+                    copyButton.textContent = '已复制';
+                    copyButton.style.backgroundColor = '#28a745';
+                    
+                    setTimeout(() => {
+                        copyButton.textContent = '复制';
+                        copyButton.style.backgroundColor = '';
+                    }, 2000);
+                }).catch(err => {
+                    console.error('复制到剪贴板失败: ', err);
+                    alert('复制到剪贴板失败，请手动复制');
+                });
+            });
+            
+            // 将元素组装到DOM中
+            buttonContainer.appendChild(copyButton);
+            historyItem.appendChild(passwordDisplay);
+            historyItem.appendChild(buttonContainer);
+            passwordList.appendChild(historyItem);
+        });
+    } catch (error) {
+        console.error('加载历史记录失败:', error);
+    }
+}
+
+// 在DOM加载后初始化组件
+document.addEventListener('DOMContentLoaded', () => {
+    loadComponents();
+    
+    // 在组件加载后立即尝试加载历史记录
+    setTimeout(() => {
+        if (window.HistoryManager && window.HistoryManager.addPasswordToHistory) {
+            loadPasswordHistory();
+        }
+    }, 500);
+});
+
+// 替换原有的init函数
 function init() {
     // 初始化密码管理器
     const savedConfig = localStorage.getItem('passwordConfig');
@@ -280,44 +492,80 @@ function init() {
                 if (lowercaseInput) lowercaseInput.checked = config.lowercase;
                 if (numbersInput) numbersInput.checked = config.numbers;
                 if (symbolsInput) symbolsInput.checked = config.symbols;
-                
-                // 显示配置恢复提示
-                showConfigMessage('已恢复上次使用的配置', 'success');
-                
-                // 自动生成新密码
-                const event = new Event('submit');
-                const passwordForm = document.getElementById('passwordForm');
-                if (passwordForm) {
-                    passwordForm.dispatchEvent(event);
+                    
+                    // 显示配置恢复提示
+                    showConfigMessage('已恢复上次使用的配置', 'success');
+                    
+                    // 自动生成新密码
+                    const event = new Event('submit');
+                    const passwordForm = document.getElementById('passwordForm');
+                    if (passwordForm) {
+                        passwordForm.dispatchEvent(event);
+                    }
+                } catch (error) {
+                    console.error('配置恢复失败:', error);
+                    showConfigMessage('配置恢复失败，使用默认设置', 'error');
                 }
-            } catch (error) {
-                console.error('配置恢复失败:', error);
-                showConfigMessage('配置恢复失败，使用默认设置', 'error');
+            }
+            
+            // 添加暗色模式切换按钮
+            const darkModeToggle = document.createElement('button');
+            darkModeToggle.id = 'darkModeToggle';
+            darkModeToggle.textContent = '切换暗色模式';
+            darkModeToggle.style.position = 'absolute';
+            darkModeToggle.style.top = '20px';
+            darkModeToggle.style.right = '20px';
+            darkModeToggle.style.zIndex = '1000';
+            darkModeToggle.style.padding = '8px 16px';
+            darkModeToggle.style.fontSize = '14px';
+            darkModeToggle.style.borderRadius = '8px';
+            darkModeToggle.style.cursor = 'pointer';
+            darkModeToggle.style.transition = 'all 0.3s ease';
+            document.body.appendChild(darkModeToggle);
+
+            // 暗色模式切换功能
+            darkModeToggle.addEventListener('click', () => {
+                document.body.classList.toggle('dark-mode');
+                darkModeToggle.textContent = document.body.classList.contains('dark-mode') 
+                    ? '切换亮色模式' 
+                    : '切换暗色模式';
+            });
+        });
+    
+    // 初始化边框切换控件状态
+    document.querySelectorAll('.border-toggle').forEach(toggle => {
+        const inputId = toggle.getAttribute('for');
+        const element = document.getElementById(inputId);
+        
+        if (element && element.type === 'checkbox') {
+            if (element.checked) {
+                toggle.classList.add('active');
+            }
+            
+            // 确保事件监听器已添加
+            const existingListener = toggle.getAttribute('data-listener-added');
+            if (!existingListener) {
+                toggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // 切换active类
+                    toggle.classList.toggle('active');
+                    
+                    // 更新隐藏的复选框状态
+                    element.checked = toggle.classList.contains('active');
+                    
+                    // 触发表单提交以生成新密码
+                    const event = new Event('submit', { bubbles: true, cancelable: true });
+                    const form = document.getElementById('passwordForm');
+                    if (form) {
+                        form.dispatchEvent(event);
+                    }
+                });
+                
+                toggle.setAttribute('data-listener-added', 'true');
             }
         }
-        
-        // 添加暗色模式切换按钮
-        const darkModeToggle = document.createElement('button');
-        darkModeToggle.id = 'darkModeToggle';
-        darkModeToggle.textContent = '切换暗色模式';
-        darkModeToggle.style.position = 'absolute';
-        darkModeToggle.style.top = '20px';
-        darkModeToggle.style.right = '20px';
-        darkModeToggle.style.zIndex = '1000';
-        darkModeToggle.style.padding = '8px 16px';
-        darkModeToggle.style.fontSize = '14px';
-        darkModeToggle.style.borderRadius = '8px';
-        darkModeToggle.style.cursor = 'pointer';
-        darkModeToggle.style.transition = 'all 0.3s ease';
-        document.body.appendChild(darkModeToggle);
-
-        // 暗色模式切换功能
-        darkModeToggle.addEventListener('click', () => {
-            document.body.classList.toggle('dark-mode');
-            darkModeToggle.textContent = document.body.classList.contains('dark-mode') 
-                ? '切换亮色模式' 
-                : '切换暗色模式';
-        });
     });
     
     // 初始化Web Worker
@@ -325,145 +573,18 @@ function init() {
 
     // 检查浏览器是否支持Web Worker
     if (typeof(Worker) !== "undefined") {
-        passwordWorker = new Worker("js/utils/password-worker.js");
-        
-        // 设置消息处理
-        passwordWorker.onmessage = function(event) {
-            if (event.data.error) {
-                console.error('密码生成错误:', event.data.error);
-                alert(event.data.error);
-                return;
-            }
-            
-            const password = event.data.password;
-            
-            // 显示密码并添加动画效果
-            const display = document.getElementById('passwordDisplay');
-            if (display) {
-                display.textContent = password;
-                display.style.opacity = 0;
-                display.style.transform = 'translateY(20px)';
-                setTimeout(() => {
-                    display.style.transition = 'all 0.5s ease-in';
-                    display.style.opacity = 1;
-                    display.style.transform = 'translateY(0)';
-                }, 50);
-            }
-            
-            // 更新密码强度指示器
-            const strengthMeter = document.getElementById('strengthMeter');
-            if (strengthMeter) {
-                updateStrengthMeter(password);
-            }
-            
-            // 添加按钮点击反馈动画
-            const button = form.querySelector('button');
-            if (button) {
-                button.style.transform = 'scale(0.95)';
-                setTimeout(() => {
-                    button.style.transform = 'scale(1.05)';
-                }, 200);
-                setTimeout(() => {
-                    button.style.transform = 'scale(1)';
-                }, 400);
-            }
-            
-            // 分析密码
-            analyzePassword(password);
-            
-            // 如果在暗色模式下，确保元素正确显示
-            if (document.body.classList.contains('dark-mode')) {
-                updateDarkModeStyles();
-            }
-        };
-        
-        passwordWorker.onerror = function(error) {
-            console.error('Web Worker错误:', error);
-            alert('密码生成功能受限，请刷新页面重试');
-        };
-    } else {
-        console.warn('Web Worker不支持，将使用主线程生成密码');
-    }
-    
-    // 表单提交处理
-    const form = document.getElementById('passwordForm');
-    form.addEventListener('submit', debounce(function(e) {
-        // 阻止事件冒泡和默认行为的强化方法
-        if (e && e.preventDefault) {
-            e.preventDefault();
-        }
-        
-        if (e && e.stopPropagation) {
-            e.stopPropagation();
-        }
-        
         try {
-            // 获取表单值
-            const lengthInput = document.getElementById('length');
-            const uppercaseInput = document.getElementById('uppercase');
-            const lowercaseInput = document.getElementById('lowercase');
-            const numbersInput = document.getElementById('numbers');
-            const symbolsInput = document.getElementById('symbols');
+            passwordWorker = new Worker("js/utils/password-worker.js");
             
-            let length = 12;
-            let uppercase = true;
-            let lowercase = true;
-            let numbers = true;
-            let symbols = true;
-            
-            // 只有在元素存在时才读取值
-            if (lengthInput) {
-                length = parseInt(lengthInput.value) || 12;
-            }
-            
-            if (uppercaseInput) {
-                uppercase = Boolean(uppercaseInput.checked);
-            }
-            
-            if (lowercaseInput) {
-                lowercase = Boolean(lowercaseInput.checked);
-            }
-            
-            if (numbersInput) {
-                numbers = Boolean(numbersInput.checked);
-            }
-            
-            if (symbolsInput) {
-                symbols = Boolean(symbolsInput.checked);
-            }
-            
-            // 如果所有字符类型都是false，则启用所有类型
-            const allFalse = !(uppercase || lowercase || numbers || symbols);
-            if (allFalse) {
-                uppercase = true;
-                lowercase = true;
-                numbers = true;
-                symbols = true;
-            }
-            
-            // 保存当前配置到localStorage
-            const currentConfig = {
-                length,
-                uppercase,
-                lowercase,
-                numbers,
-                symbols
-            };
-            
-            localStorage.setItem('passwordConfig', JSON.stringify(currentConfig));
-            
-            // 使用密码管理器更新配置（如果可用）
-            if (window.PasswordManager && window.PasswordManager.updateConfig) {
-                window.PasswordManager.updateConfig(currentConfig);
-            }
-            
-            // 使用Web Worker生成密码
-            if (passwordWorker) {
-                passwordWorker.postMessage({ config: currentConfig });
-            } else {
-                // 回退到主线程生成密码
-                const options = { uppercase, lowercase, numbers, symbols };
-                const password = generateSecurePassword(length, options);
+            // 设置消息处理
+            passwordWorker.onmessage = function(event) {
+                if (event.data.error) {
+                    console.error('密码生成错误:', event.data.error);
+                    alert(event.data.error);
+                    return;
+                }
+                
+                const password = event.data.password;
                 
                 // 显示密码并添加动画效果
                 const display = document.getElementById('passwordDisplay');
@@ -503,114 +624,163 @@ function init() {
                 if (document.body.classList.contains('dark-mode')) {
                     updateDarkModeStyles();
                 }
-            }
+            };
             
-            // 添加复制功能
-            const copyButton = document.getElementById('copyButton');
-            if (copyButton) {
-                copyButton.onclick = () => {
-                    const password = document.getElementById('passwordDisplay').textContent;
-                    navigator.clipboard.writeText(password).then(() => {
-                        // 添加复制成功动画
-                        copyButton.textContent = '已复制!';
-                        copyButton.style.backgroundColor = '#28a745';
-                        
-                        // 添加到密码历史记录（作为备份）
-                        addPasswordToHistory(password);
-                        
-                        setTimeout(() => {
-                            copyButton.textContent = '复制密码';
-                            copyButton.style.backgroundColor = '#007BFF';
-                        }, 2000);
-                    }).catch(err => {
-                        console.error('复制到剪贴板失败: ', err);
-                        alert('复制到剪贴板失败，请手动复制');
-                        
-                        // 如果复制失败，也尝试添加到历史记录（作为备份）
-                        addPasswordToHistory(password);
-                    });
-                };
-            }
-            
+            passwordWorker.onerror = function(error) {
+                console.error('Web Worker错误:', error);
+                alert('密码生成功能受限，请刷新页面重试');
+            };
         } catch (error) {
-            console.error('密码生成错误:', error);
-            alert(error.message);
+            console.error('Web Worker初始化错误:', error);
+            passwordWorker = null;
         }
-        
-        // 返回false以阻止表单提交
-        return false;
-    }, 300));
-    
-    // 使用代理事件监听防止表单提交
-    const observer = new MutationObserver(() => {
-        const form = document.getElementById('passwordForm');
-        if (form && !form._listenerAdded) {
-            form.onsubmit = function(e) {
-                if (e && e.preventDefault) {
-                    e.preventDefault();
-                }
-                return false;
-            };
-            
-            form._listenerAdded = true;
-        }
-    });
+    } else {
+        console.warn('Web Worker不支持，将使用主线程生成密码');
+    }
 
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    // 在DOM加载后立即设置阻止提交
-    setTimeout(() => {
-        const form = document.getElementById('passwordForm');
-        if (form) {
-            form.onsubmit = function(e) {
-                if (e && e.preventDefault) {
-                    e.preventDefault();
-                }
-                return false;
-            };
-            
-            form._listenerAdded = true;
-        }
-    }, 100);
-
-    // 初始化密码长度滑动条
-    initPasswordSlider();
-    
-    // 初始化边框切换控件状态
-    document.querySelectorAll('.border-toggle').forEach(toggle => {
-        const inputId = toggle.getAttribute('for');
-        const element = document.getElementById(inputId);
-        
-        if (element && element.type === 'checkbox') {
-            if (element.checked) {
-                toggle.classList.add('active');
+    // 表单提交处理
+    const form = document.getElementById('passwordForm');
+    if (form) {
+        // 强化阻止默认提交行为的方法
+        form.onsubmit = function(e) {
+            if (e && e.preventDefault) {
+                e.preventDefault();
             }
             
-            // 确保事件监听器已添加
-            const existingListener = toggle.getAttribute('data-listener-added');
-            if (!existingListener) {
-                toggle.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    // 切换active类
-                    toggle.classList.toggle('active');
-                    
-                    // 更新隐藏的复选框状态
-                    element.checked = toggle.classList.contains('active');
-                    
-                    // 触发表单提交以生成新密码
-                    const event = new Event('submit', { bubbles: true, cancelable: true });
-                    const form = document.getElementById('passwordForm');
-                    if (form) {
-                        form.dispatchEvent(event);
-                    }
-                });
+            if (e && e.stopPropagation) {
+                e.stopPropagation();
+            }
+            
+            return false;
+        };
+        
+        // 添加事件监听器
+        form.addEventListener('submit', debounce(function(e) {
+            // 再次确认阻止默认行为
+            if (e && e.preventDefault) {
+                e.preventDefault();
+            }
+            
+            if (e && e.stopPropagation) {
+                e.stopPropagation();
+            }
+            
+            try {
+                // 获取表单值
+                const lengthInput = document.getElementById('length');
+                const uppercaseInput = document.getElementById('uppercase');
+                const lowercaseInput = document.getElementById('lowercase');
+                const numbersInput = document.getElementById('numbers');
+                const symbolsInput = document.getElementById('symbols');
                 
-                toggle.setAttribute('data-listener-added', 'true');
+                let length = 12;
+                let uppercase = true;
+                let lowercase = true;
+                let numbers = true;
+                let symbols = true;
+                
+                // 只有在元素存在时才读取值
+                if (lengthInput) {
+                    length = parseInt(lengthInput.value) || 12;
+                }
+                
+                if (uppercaseInput) {
+                    uppercase = Boolean(uppercaseInput.checked);
+                }
+                
+                if (lowercaseInput) {
+                    lowercase = Boolean(lowercaseInput.checked);
+                }
+                
+                if (numbersInput) {
+                    numbers = Boolean(numbersInput.checked);
+                }
+                
+                if (symbolsInput) {
+                    symbols = Boolean(symbolsInput.checked);
+                }
+                
+                // 如果所有字符类型都是false，则启用所有类型
+                const allFalse = !(uppercase || lowercase || numbers || symbols);
+                if (allFalse) {
+                    uppercase = true;
+                    lowercase = true;
+                    numbers = true;
+                    symbols = true;
+                }
+                
+                // 保存当前配置到localStorage
+                const currentConfig = {
+                    length,
+                    uppercase,
+                    lowercase,
+                    numbers,
+                    symbols
+                };
+                
+                localStorage.setItem('passwordConfig', JSON.stringify(currentConfig));
+                
+                // 使用密码管理器更新配置（如果可用）
+                if (window.PasswordManager && window.PasswordManager.updateConfig) {
+                    window.PasswordManager.updateConfig(currentConfig);
+                }
+                
+                // 使用Web Worker生成密码
+                if (passwordWorker) {
+                    passwordWorker.postMessage({ config: currentConfig });
+                } else {
+                    // 回退到主线程生成密码
+                    const options = { uppercase, lowercase, numbers, symbols };
+                    const password = generateSecurePassword(length, options);
+                    
+                    // 显示密码并添加动画效果
+                    const display = document.getElementById('passwordDisplay');
+                    if (display) {
+                        display.textContent = password;
+                        display.style.opacity = 0;
+                        display.style.transform = 'translateY(20px)';
+                        setTimeout(() => {
+                            display.style.transition = 'all 0.5s ease-in';
+                            display.style.opacity = 1;
+                            display.style.transform = 'translateY(0)';
+                        }, 50);
+                    }
+                    
+                    // 更新密码强度指示器
+                    const strengthMeter = document.getElementById('strengthMeter');
+                    if (strengthMeter) {
+                        updateStrengthMeter(password);
+                    }
+                    
+                    // 添加按钮点击反馈动画
+                    const button = form.querySelector('button');
+                    if (button) {
+                        button.style.transform = 'scale(0.95)';
+                        setTimeout(() => {
+                            button.style.transform = 'scale(1.05)';
+                        }, 200);
+                        setTimeout(() => {
+                            button.style.transform = 'scale(1)';
+                        }, 400);
+                    }
+                    
+                    // 分析密码
+                    analyzePassword(password);
+                    
+                    // 如果在暗色模式下，确保元素正确显示
+                    if (document.body.classList.contains('dark-mode')) {
+                        updateDarkModeStyles();
+                    }
+                }
+                
+                return false;
+            } catch (error) {
+                console.error('密码生成错误:', error);
+                alert(error.message);
+                return false;
             }
-        }
-    });
+        }, 300));
+    }
 }
 
 // 更新密码显示
