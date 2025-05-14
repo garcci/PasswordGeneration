@@ -13,7 +13,7 @@ let currentConfig = {
     symbols: true
 };
 
-// 初始化函数
+// 修改初始化函数
 function initPasswordManager(config) {
     // 如果提供了新配置，则更新当前配置
     if (config) {
@@ -24,15 +24,69 @@ function initPasswordManager(config) {
     const savedHistory = localStorage.getItem('passwordHistory');
     if (savedHistory) {
         try {
-            const history = JSON.parse(savedHistory);
-            // 将保存的历史密码添加到内存集合中
-            history.forEach(item => {
-                if (item && item.password) {
-                    generatedPasswords.add(item.password);
+            // 修改解密函数，处理非加密的普通字符串数据
+            function decryptData(encryptedData) {
+                try {
+                    // 先进行decodeURIComponent以处理特殊字符
+                    // 使用更安全的解码方法，添加正则表达式过滤非法字符
+                    const base64regex = /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
+                    
+                    // 如果是Base64格式的数据，按原方式处理
+                    if (base64regex.test(encryptedData)) {
+                        var decoded = decodeURIComponent(escape(atob(encryptedData)));
+                        var decrypted = JSON.parse(decoded);
+                        return decrypted;
+                    } else {
+                        // 如果不是Base64格式，尝试解析为普通JSON字符串
+                        try {
+                            var parsed = JSON.parse(encryptedData);
+                            // 处理旧版本的单个密码情况
+                            if (typeof parsed === 'string') {
+                                return [{ password: parsed }];
+                            }
+                            return parsed;
+                        } catch (jsonError) {
+                            // 如果解析失败，返回空数组
+                            console.error('JSON解析失败:', jsonError);
+                            return [];
+                        }
+                    }
+                } catch (decodeError) {
+                    console.error('解密失败:', decodeError);
+                    return null;
                 }
-            });
+            }
+            
+            // 解密历史记录
+            var history = decryptData(savedHistory);
+            
+            // 确保我们有有效的历史记录
+            if (history && Array.isArray(history) && history.length > 0) {
+                // 检查数据版本
+                if (history.v === undefined || history.v === 1) {
+                    // 处理旧版本或未明确指定版本的数据
+                    var items = (history.v === undefined) ? history : history.data;
+                    
+                    items.forEach(function(item) {
+                        if (item && item.password) {
+                            generatedPasswords.add(item.password);
+                        }
+                    });
+                } else {
+                    // 对于未来可能的版本升级
+                    console.warn('不支持的历史记录版本:', history.v);
+                    localStorage.removeItem('passwordHistory');
+                    return;
+                }
+            } else {
+                // 如果解密失败或数据无效，尝试清除历史记录
+                localStorage.removeItem('passwordHistory');
+                console.log('无效的历史记录已清除');
+            }
         } catch (error) {
             console.error('无法解析历史记录:', error);
+            // 如果解密失败，清除损坏的历史记录
+            localStorage.removeItem('passwordHistory');
         }
     }
 }
@@ -124,13 +178,14 @@ function updatePasswordHistoryStorage(password) {
     // 更新内存中的历史记录
     generatedPasswords = new Set(history);
     
-    // 更新localStorage
-    localStorage.setItem('passwordHistory', JSON.stringify(
-        Array.from(generatedPasswords).map(password => ({
-            password,
-            timestamp: new Date().toISOString()
-        }))
-    ));
+    // 直接将数据转换为JSON字符串存储
+    const historyData = Array.from(generatedPasswords).map(password => ({
+        password,
+        timestamp: new Date().toISOString()
+    }));
+    
+    // 将JSON字符串存储到localStorage
+    localStorage.setItem('passwordHistory', JSON.stringify(historyData));
     
     // 更新UI显示
     loadPasswordHistory();

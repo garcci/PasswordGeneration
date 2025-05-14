@@ -10,6 +10,31 @@
         const passwordList = document.getElementById('passwordHistoryList');
         if (!passwordList) return;
         
+        // 检查是否已存在相同的密码条目
+        const existingItems = passwordList.querySelectorAll('li');
+        for (let i = 0; i < existingItems.length; i++) {
+            const existingPasswordElement = existingItems[i].querySelector('.history-password-display');
+            if (!existingPasswordElement) continue;
+            
+            const existingPassword = existingPasswordElement.textContent;
+            // 移除...部分，比较原始密码
+            const cleanExistingPassword = existingPassword.replace('...', '');
+            
+            // 确保密码长度足够再进行子字符串操作
+            if (password.length >= 12) {
+                const cleanNewPassword = password.substring(0, 6) + password.substring(password.length - 6);
+                if (cleanExistingPassword === cleanNewPassword) {
+                    // 如果密码已存在，不再重复添加
+                    return;
+                }
+            } else {
+                // 对于短密码直接比较
+                if (cleanExistingPassword === password) {
+                    return;
+                }
+            }
+        }
+        
         // 创建新条目
         const historyItem = document.createElement('li');
         

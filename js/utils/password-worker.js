@@ -6,9 +6,22 @@ const charSets = {
     symbols: '!@#$%^&*()_+{}[]=<>/.,?~' + "-:\"|';:`"
 };
 
-// 密码生成功能
+// 修改密码生成功能
 function generateSecurePassword(length, options) {
     const { uppercase, lowercase, numbers, symbols } = options;
+    
+    // 使用更安全的随机数生成方法
+    function getRandomValue(max) {
+        const array = new Uint32Array(1);
+        // 在Web Worker中使用self.crypto而不是window.crypto
+        if (typeof self !== 'undefined' && self.crypto && self.crypto.getRandomValues) {
+            self.crypto.getRandomValues(array);
+        } else {
+            // 回退到Math.random()，虽然安全性较低
+            array[0] = Math.floor(Math.random() * max);
+        }
+        return array[0] % max;
+    }
     
     // 处理密码生成请求
     self.onmessage = function(e) {
@@ -38,14 +51,14 @@ function generateSecurePassword(length, options) {
             // 确保每种选中的字符类型都有至少一个字符
             availableCharSets.forEach(setName => {
                 const charSet = charSets[setName];
-                password += charSet[Math.floor(Math.random() * charSet.length)];
+                password += charSet[getRandomValue(charSet.length)];
             });
             
             // 如果密码长度不足指定长度，补充随机字符
             while (password.length < config.length) {
-                const randomSet = availableCharSets[Math.floor(Math.random() * availableCharSets.length)];
+                const randomSet = availableCharSets[getRandomValue(availableCharSets.length)];
                 const charSet = charSets[randomSet];
-                password += charSet[Math.floor(Math.random() * charSet.length)];
+                password += charSet[getRandomValue(charSet.length)];
             }
             
             // 将密码转换为数组进行随机排序
@@ -77,6 +90,23 @@ function generateSecurePassword(length, options) {
                     // 将第一个大写字母移到开头
                     password = password[firstUpperCaseIndex] + password.slice(0, firstUpperCaseIndex) + password.slice(firstUpperCaseIndex + 1);
                 }
+            }
+            
+            // 确保密码不是常见的弱密码
+            const weakPasswords = [
+                'password', '123456', 'qwerty', 'abc123',
+                'password1', '123456789', 'iloveyou', 'admin',
+                'welcome', 'monkey', 'login', 'princess'
+            ];
+            
+            if (weakPasswords.includes(password.toLowerCase())) {
+                // 如果生成的是弱密码，递归重新生成
+                return generateSecurePassword(config.length, {
+                    uppercase: config.uppercase,
+                    lowercase: config.lowercase,
+                    numbers: config.numbers,
+                    symbols: config.symbols
+                });
             }
             
             // 返回结果给主线程
