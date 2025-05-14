@@ -2,12 +2,59 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>随机安全密码生成器</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>随机安全密码生成器 - 生成高强度安全密码</title>
+    <meta name="description" content="一个简单易用的在线密码生成工具，可创建高强度、安全的随机密码，适用于各种账户保护需求">
+    <meta name="keywords" content="密码生成器，在线密码生成，安全密码，随机密码，高强度密码">
+    <meta name="author" content="密码生成器团队">
     <link rel="stylesheet" href="css/style.css">
+    
+    <!-- Open Graph 标签 -->
+    <meta property="og:title" content="随机安全密码生成器 - 生成高强度安全密码">
+    <meta property="og:description" content="一个简单易用的在线密码生成工具，可创建高强度、安全的随机密码，适用于各种账户保护需求">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://pwd.gjqqq.com">
+    <meta property="og:site_name" content="随机安全密码生成器">
+    
+    <!-- Twitter 卡片 -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="随机安全密码生成器 - 生成高强度安全密码">
+    <meta name="twitter:description" content="一个简单易用的在线密码生成工具，可创建高强度、安全的随机密码，适用于各种账户保护需求">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    
+    <!-- 架构化数据 - 组织信息 -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "随机安全密码生成器",
+      "url": "https://pwd.gjqqq.com",
+      "logo": "https://pwd.gjqqq.com/apple-touch-icon.png"
+    }
+    </script>
+    
+    <!-- 架构化数据 - 网站导航 -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "随机安全密码生成器",
+      "url": "https://pwd.gjqqq.com",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://pwd.gjqqq.com?search={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
 </head>
 <body>
-    <div class="container">
-        <h1>随机安全密码生成器</h1>
+    <div class="container" itemscope itemtype="https://schema.org/WebApplication">
+        <h1 itemprop="name">随机安全密码生成器</h1>
+        <p itemprop="description">一个简单易用的在线密码生成工具，可创建高强度、安全的随机密码，适用于各种账户保护需求</p>
         <form id="passwordForm">
             <div class="config-section">
                 <!-- 隐藏的复选框用于保持功能完整性 -->
