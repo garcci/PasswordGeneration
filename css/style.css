@@ -11,8 +11,13 @@ body {
     overflow: auto; /* 添加溢出自动滚动 */
 }
 
-/* 容器样式 */
+/* 添加全局过渡效果 */
+body {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
 .container {
+  transition: background-color 0.3s ease, color 0.3s ease;
     background-color: #ffffffcc;
     backdrop-filter: blur(10px);
     border-radius: 20px;
@@ -104,10 +109,20 @@ button {
     color: white;
 }
 
+/* 按钮悬停效果 */
+button {
+  transition: all 0.3s ease;
+}
+
 /* 暗色模式按钮样式 */
 .dark-mode button {
     background-color: #007BFF;
     color: white;
+}
+
+/* 暗色模式按钮悬停效果 */
+.dark-mode button:hover {
+  background-color: #4d4d4d !important;
 }
 
 /* 复制按钮悬停效果 */
@@ -170,6 +185,11 @@ button:active {
         min-height: 60px;
         padding: 12px;
     }
+}
+
+/* 密码显示过渡效果 */
+.password-display {
+  transition: all 0.6s ease-in-out;
 }
 
 /* 暗色模式下的密码显示 */
@@ -1120,3 +1140,23 @@ html {
 }
 
 /* 已有样式保持不变... */
+/* 加载指示器动画 */
+@keyframes spin {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.password-loader {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #007BFF;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  z-index: 10;
+  display: none;
+}

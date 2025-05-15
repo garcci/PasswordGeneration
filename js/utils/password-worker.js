@@ -142,6 +142,70 @@ function generateSecurePassword(length, options) {
     }
 }
 
+// 密码分析函数
+function analyzePassword(password) {
+    // 分析密码特征
+    const hasUppercase = /[A-Z]/.test(password);
+    const hasLowercase = /[a-z]/.test(password);
+    const hasNumbers = /[0-9]/.test(password);
+    const hasSymbols = /[^A-Za-z0-9]/.test(password);
+    
+    // 计算密码熵
+    const entropy = calculateEntropy(password);
+    
+    // 返回分析结果
+    return {
+        hasUppercase,
+        hasLowercase,
+        hasNumbers,
+        hasSymbols,
+        entropy
+    };
+}
+
+// 计算密码熵函数
+function calculateEntropy(password) {
+    let charsetSize = 0;
+    
+    if (/[A-Z]/.test(password)) charsetSize += 26;
+    if (/[a-z]/.test(password)) charsetSize += 26;
+    if (/[0-9]/.test(password)) charsetSize += 10;
+    if (/[^A-Za-z0-9]/.test(password)) charsetSize += 32; // 粗略估计特殊字符数量
+    
+    // 如果无法确定字符集大小，使用默认值
+    charsetSize = Math.max(charsetSize, 10); // 至少10种可能的字符
+    
+    // 计算熵: log2(charsetSize^length)
+    return password.length * Math.log2(charsetSize);
+}
+
+// 处理消息事件
+onmessage = function(event) {
+    try {
+        const { config } = event.data;
+        
+        // 生成密码
+        const password = generateSecurePassword(config.length, {
+            uppercase: config.uppercase,
+            lowercase: config.lowercase,
+            numbers: config.numbers,
+            symbols: config.symbols
+        });
+        
+        // 分析密码
+        const analysisResult = analyzePassword(password);
+        
+        // 发送结果回主线程
+        postMessage({ 
+            password: password,
+            analysis: analysisResult
+        });
+    } catch (error) {
+        console.error('Worker错误:', error);
+        postMessage({ error: '密码生成失败: ' + error.message });
+    }
+};
+
 // 添加错误处理
 try {
     // 检查是否在Web Worker上下文中
